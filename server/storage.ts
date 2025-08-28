@@ -11,10 +11,13 @@ if (!connectionString) {
 
 // Configure postgres client with SSL settings for Supabase
 const client = postgres(connectionString, {
-  ssl: false,
+  ssl: 'require',
   max: 20,
   idle_timeout: 20,
   connect_timeout: 30,
+  transform: {
+    undefined: null
+  }
 });
 const db = drizzle(client);
 
@@ -59,7 +62,7 @@ export class DatabaseStorage implements IStorage {
     // Add face shape matching if available
     if (criteria.faceShape) {
       conditions.push(
-        sql`${frames.suitableFaceShapes} @> ${[criteria.faceShape]}`
+        sql`${frames.suitableFaceShapes} && ARRAY[${criteria.faceShape}]::text[]`
       );
     }
 

@@ -13,7 +13,15 @@ import type { Frame, AnalysisResult } from "@shared/schema";
 interface AnalysisResponse {
   sessionId: string;
   analysis: AnalysisResult;
-  recommendedFrames: Frame[];
+  recommendedFrames: FrameWithTryOn[];
+  message?: string;
+}
+
+interface FrameWithTryOn extends Frame {
+  virtualTryOn?: {
+    imageBase64: string;
+    description: string;
+  } | null;
 }
 
 const steps = [
@@ -28,8 +36,8 @@ export default function Home() {
   const [capturedPhoto, setCapturedPhoto] = useState<File | null>(null);
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
-  const [recommendedFrames, setRecommendedFrames] = useState<Frame[]>([]);
-  const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
+  const [recommendedFrames, setRecommendedFrames] = useState<FrameWithTryOn[]>([]);
+  const [selectedFrame, setSelectedFrame] = useState<FrameWithTryOn | null>(null);
   const { toast } = useToast();
 
   const analyzeFaceMutation = useMutation({
@@ -81,7 +89,7 @@ export default function Home() {
     setCurrentStep(0);
   }, []);
 
-  const handleTryOnFrame = useCallback((frame: Frame) => {
+  const handleTryOnFrame = useCallback((frame: FrameWithTryOn) => {
     setSelectedFrame(frame);
     setCurrentStep(4); // Move to try-on step
   }, []);
@@ -344,23 +352,46 @@ export default function Home() {
               {/* Try-On Preview */}
               <Card className="overflow-hidden">
                 <div className="aspect-[4/3] bg-muted flex items-center justify-center relative">
-                  {photoUrl ? (
-                    <img
-                      src={photoUrl}
-                      alt="Try-on preview"
-                      className="w-full h-full object-cover"
-                      data-testid="img-try-on-preview"
-                    />
+                  {selectedFrame?.virtualTryOn?.imageBase64 ? (
+                    <div className="w-full h-full">
+                      <img
+                        src={`data:image/jpeg;base64,${selectedFrame.virtualTryOn.imageBase64}`}
+                        alt="Virtual try-on preview"
+                        className="w-full h-full object-cover"
+                        data-testid="img-try-on-preview"
+                      />
+                      {/* AI Generated Badge */}
+                      <div className="absolute top-2 left-2">
+                        <div className="bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded-full">
+                          AI Generated
+                        </div>
+                      </div>
+                    </div>
+                  ) : photoUrl ? (
+                    <div className="w-full h-full relative">
+                      <img
+                        src={photoUrl}
+                        alt="Your original photo"
+                        className="w-full h-full object-cover opacity-50"
+                        data-testid="img-try-on-preview"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                        <div className="text-white text-center">
+                          <p className="text-lg font-semibold">Generating virtual try-on...</p>
+                          <p className="text-sm mt-1">This may take a few moments</p>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="text-muted-foreground text-center">
-                      <p className="text-lg">Try-on preview will appear here</p>
-                      <p className="text-sm mt-2">Feature coming soon - for now, use your imagination!</p>
+                      <p className="text-lg">Virtual try-on preview</p>
+                      <p className="text-sm mt-2">Select a frame to see how it looks on you</p>
                     </div>
                   )}
                 </div>
 
                 <div className="p-4 border-t border-border">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center mb-3">
                     <div>
                       <h3 className="font-semibold" data-testid="text-selected-frame-name">
                         {selectedFrame.name}
@@ -371,6 +402,21 @@ export default function Home() {
                     </div>
                     <span className="text-lg font-bold text-primary">${selectedFrame.price}</span>
                   </div>
+                  
+                  {/* AI Analysis of the try-on */}
+                  {selectedFrame.virtualTryOn?.description && (
+                    <div className="bg-accent/10 rounded-lg p-3 mt-3">
+                      <div className="flex items-start">
+                        <Brain className="text-accent mr-2 w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-accent mb-1">AI Stylist Analysis</p>
+                          <p className="text-sm text-accent-foreground">
+                            {selectedFrame.virtualTryOn.description}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </Card>
 

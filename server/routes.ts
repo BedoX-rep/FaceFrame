@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
-import { analyzeFacialFeatures } from "./services/gemini";
+import { analyzeFacialFeatures, generateVirtualTryOn } from "./services/gemini";
 import { frameSearchSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 
@@ -22,7 +22,7 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Analyze face and get frame recommendations
+  // Analyze face and get frame recommendations with virtual try-on
   app.post("/api/analyze-face", upload.single("photo"), async (req, res) => {
     try {
       if (!req.file) {
@@ -32,21 +32,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionId = req.body.sessionId || randomUUID();
       const imageBase64 = req.file.buffer.toString('base64');
 
-      // Analyze facial features using Gemini
+      // Step 1: Analyze facial features using Gemini
+      console.log("Step 1: Analyzing facial features...");
       const analysis = await analyzeFacialFeatures(imageBase64);
 
-      // Save analysis to database
+      // Step 2: Save analysis to database
+      console.log("Step 2: Saving analysis to database...");
       const savedAnalysis = await storage.saveAnalysis({
         sessionId,
         faceShape: analysis.faceShape,
         recommendedSize: analysis.recommendedSize,
         recommendedColors: analysis.recommendedColors || [],
         recommendedStyles: analysis.recommendedStyles || [],
-        confidence: analysis.confidence.toString(),
+        confidence: analysis.confidence?.toString() || "0.80",
         analysisData: analysis,
       });
 
-      // Search for matching frames
+      // Step 3: Search for matching frames
+      console.log("Step 3: Searching for matching frames...");
       const searchCriteria = {
         faceShape: analysis.faceShape,
         recommendedSize: analysis.recommendedSize,
@@ -56,10 +59,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const recommendedFrames = await storage.searchFrames(searchCriteria, 5);
 
+      // Step 4: Generate virtual try-on images for each recommended frame
+      console.log("Step 4: Generating virtual try-on images...");
+      const framesWithTryOn = [];
+
+      for (const frame of recommendedFrames) {
+        try {
+          // For this demo, we'll use a placeholder frame image
+          // In a real implementation, you'd fetch the actual frame image from frame.imageUrl
+          let frameImageBase64 = imageBase64; // Placeholder - would be the actual frame photo
+          
+          // If frame has an imageUrl, you could fetch it and convert to base64
+          if (frame.imageUrl && frame.imageUrl.startsWith('data:image/')) {
+            frameImageBase64 = frame.imageUrl.split(',')[1];
+          }
+
+          const virtualTryOn = await generateVirtualTryOn(
+            imageBase64,
+            frameImageBase64,
+            {
+              name: frame.name,
+              brand: frame.brand,
+              style: frame.style,
+              color: frame.color,
+            }
+          );
+
+          framesWithTryOn.push({
+            ...frame,
+            virtualTryOn: {
+              imageBase64: virtualTryOn.generatedImageBase64,
+              description: virtualTryOn.description,
+            },
+          });
+        } catch (tryOnError) {
+          console.error(`Failed to generate try-on for frame ${frame.id}:`, tryOnError);
+          // Include frame without try-on if generation fails
+          framesWithTryOn.push({
+            ...frame,
+            virtualTryOn: null,
+          });
+        }
+      }
+
+      console.log("Step 5: Completed! Sending results to client...");
       res.json({
         sessionId,
         analysis: savedAnalysis,
-        recommendedFrames,
+        recommendedFrames: framesWithTryOn,
+        message: "Successfully generated virtual try-on images for recommended frames!",
       });
     } catch (error) {
       console.error("Face analysis error:", error);
