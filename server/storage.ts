@@ -1,5 +1,5 @@
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { eq, and, inArray, desc, sql } from "drizzle-orm";
 import { type User, type InsertUser, type Frame, type InsertFrame, type AnalysisResult, type InsertAnalysis, type FrameSearchCriteria } from "@shared/schema";
 import { users, frames, analysisResults } from "@shared/schema";
@@ -9,7 +9,13 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is required");
 }
 
-const client = neon(connectionString);
+// Configure postgres client with SSL settings for Supabase
+const client = postgres(connectionString, {
+  ssl: false,
+  max: 20,
+  idle_timeout: 20,
+  connect_timeout: 30,
+});
 const db = drizzle(client);
 
 export interface IStorage {
