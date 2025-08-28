@@ -1,0 +1,74 @@
+-- Enable UUID extension for generating UUIDs
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Create users table
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    username TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL
+);
+
+-- Create frames table (your products)
+CREATE TABLE IF NOT EXISTS frames (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    brand TEXT NOT NULL,
+    style TEXT NOT NULL,
+    color TEXT NOT NULL,
+    size TEXT NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    stock_status TEXT NOT NULL DEFAULT 'in_stock',
+    stock_count INTEGER DEFAULT 0,
+    image_url TEXT NOT NULL,
+    description TEXT,
+    features JSONB,
+    suitable_face_shapes TEXT[],
+    is_active BOOLEAN DEFAULT true
+);
+
+-- Create analysis_results table
+CREATE TABLE IF NOT EXISTS analysis_results (
+    id VARCHAR PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id TEXT NOT NULL,
+    face_shape TEXT NOT NULL,
+    recommended_size TEXT NOT NULL,
+    recommended_colors TEXT[],
+    recommended_styles TEXT[],
+    confidence DECIMAL(3,2),
+    analysis_data JSONB,
+    created_at TEXT DEFAULT NOW()
+);
+
+-- Insert realistic test frame data
+INSERT INTO frames (name, brand, style, color, size, price, stock_status, stock_count, image_url, description, features, suitable_face_shapes) VALUES
+('Classic Aviator', 'Ray-Ban', 'Aviator', 'Gold', 'Medium', 189.99, 'in_stock', 25, 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=300&h=300&fit=crop', 'Timeless aviator design with gold frame and green lenses', '{"material": "metal", "lens_type": "polarized", "weight": "lightweight"}', '{"oval", "square", "heart"}'),
+
+('Wayfarer Black', 'Ray-Ban', 'Rectangle', 'Black', 'Large', 159.99, 'in_stock', 18, 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=300&h=300&fit=crop', 'Classic black wayfarer style perfect for any occasion', '{"material": "acetate", "lens_type": "standard", "weight": "medium"}', '{"round", "oval", "diamond"}'),
+
+('Round Vintage', 'Oliver Peoples', 'Round', 'Tortoise', 'Small', 299.99, 'in_stock', 12, 'https://images.unsplash.com/photo-1509695507497-903c140c43b0?w=300&h=300&fit=crop', 'Vintage-inspired round frames in classic tortoise pattern', '{"material": "acetate", "lens_type": "anti-glare", "weight": "lightweight"}', '{"square", "heart", "oblong"}'),
+
+('Modern Square', 'Warby Parker', 'Square', 'Blue', 'Medium', 95.99, 'low_stock', 3, 'https://images.unsplash.com/photo-1556306510-c0b89e82e72e?w=300&h=300&fit=crop', 'Contemporary square frames in stylish blue', '{"material": "acetate", "lens_type": "blue_light", "weight": "lightweight"}', '{"round", "oval"}'),
+
+('Cat-Eye Classic', 'Tom Ford', 'Cat-eye', 'Black', 'Small', 450.00, 'in_stock', 8, 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=300&h=300&fit=crop', 'Elegant cat-eye frames for a sophisticated look', '{"material": "acetate", "lens_type": "standard", "weight": "medium"}', '{"heart", "diamond", "oval"}'),
+
+('Minimalist Wire', 'Lindberg', 'Round', 'Silver', 'Medium', 380.00, 'in_stock', 15, 'https://images.unsplash.com/photo-1583394838336-acd977736f90?w=300&h=300&fit=crop', 'Ultra-lightweight titanium wire frame', '{"material": "titanium", "lens_type": "anti-glare", "weight": "ultra_light"}', '{"square", "oblong", "diamond"}'),
+
+('Retro Square', 'Persol', 'Square', 'Brown', 'Large', 320.00, 'in_stock', 10, 'https://images.unsplash.com/photo-1577803645773-f96470509666?w=300&h=300&fit=crop', 'Retro-style square frames in warm brown tone', '{"material": "acetate", "lens_type": "polarized", "weight": "medium"}', '{"round", "oval"}'),
+
+('Sport Wrap', 'Oakley', 'Rectangle', 'Black', 'Large', 199.99, 'out_of_stock', 0, 'https://images.unsplash.com/photo-1591076482161-42ce6da69f67?w=300&h=300&fit=crop', 'Performance sports glasses with wrap-around design', '{"material": "plastic", "lens_type": "polarized", "weight": "lightweight"}', '{"oval", "square", "heart"}'),
+
+('Designer Oval', 'Prada', 'Oval', 'Gold', 'Small', 420.00, 'order_only', 0, 'https://images.unsplash.com/photo-1614715838648-8451b4da8fca?w=300&h=300&fit=crop', 'Luxury oval frames with gold accents', '{"material": "metal", "lens_type": "anti_glare", "weight": "medium"}', '{"square", "heart", "oblong"}'),
+
+('Thick Rim Black', 'Moscot', 'Rectangle', 'Black', 'Medium', 280.00, 'in_stock', 7, 'https://images.unsplash.com/photo-1615887351488-9a9ba07f8ba2?w=300&h=300&fit=crop', 'Bold black frames with thick acetate construction', '{"material": "acetate", "lens_type": "standard", "weight": "heavy"}', '{"round", "diamond", "oval"}');
+
+-- Create indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_frames_suitable_face_shapes ON frames USING GIN (suitable_face_shapes);
+CREATE INDEX IF NOT EXISTS idx_frames_style ON frames (style);
+CREATE INDEX IF NOT EXISTS idx_frames_color ON frames (color);
+CREATE INDEX IF NOT EXISTS idx_frames_size ON frames (size);
+CREATE INDEX IF NOT EXISTS idx_frames_stock_status ON frames (stock_status);
+CREATE INDEX IF NOT EXISTS idx_analysis_session ON analysis_results (session_id);
+
+-- Verify the data was inserted
+SELECT COUNT(*) as total_frames FROM frames;
+SELECT style, COUNT(*) as count FROM frames GROUP BY style ORDER BY count DESC;
