@@ -95,6 +95,12 @@ Your task is to:
 3. Suggest frame colors that complement skin tone and features
 4. Recommend frame styles that enhance facial features
 
+IMPORTANT: Use only these exact values for your recommendations:
+- Face shapes: oval, round, square, heart, diamond, oblong
+- Frame sizes: Small, Medium, Large (exactly as written)
+- Frame colors: Black, Blue, Gold, Tortoise (exactly as written)
+- Frame styles: Aviator, Cat-eye, Rectangle, Round, Square (exactly as written, note Cat-eye has lowercase 'e')
+
 Consider factors like:
 - Face width vs length ratio
 - Jawline shape and prominence

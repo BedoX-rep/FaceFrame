@@ -54,45 +54,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchFrames(criteria: FrameSearchCriteria, limit: number = 5): Promise<Frame[]> {
-    // Build dynamic query based on criteria
-    const conditions = [
-      eq(frames.isActive, true)
-    ];
-
-    // Add face shape matching if available
-    if (criteria.faceShape) {
-      conditions.push(
-        sql`${frames.suitableFaceShapes} && ARRAY[${criteria.faceShape}]::text[]`
-      );
-    }
-
-    // Add size matching
-    if (criteria.recommendedSize) {
-      conditions.push(eq(frames.size, criteria.recommendedSize));
-    }
-
-    // Add color matching if colors are specified
-    if (criteria.recommendedColors && criteria.recommendedColors.length > 0) {
-      conditions.push(
-        inArray(frames.color, criteria.recommendedColors)
-      );
-    }
-
-    // Add style matching if styles are specified
-    if (criteria.recommendedStyles && criteria.recommendedStyles.length > 0) {
-      conditions.push(
-        inArray(frames.style, criteria.recommendedStyles)
-      );
-    }
-
-    const result = await db
+    // Get all active frames first
+    const allFrames = await db
       .select()
       .from(frames)
-      .where(and(...conditions))
-      .orderBy(desc(frames.stockCount)) // Prioritize in-stock items
-      .limit(limit);
+      .where(eq(frames.isActive, true));
 
-    return result;
+    // Score each frame based on how well it matches the criteria
+    const scoredFrames = allFrames.map(frame => {
+      let score = 0;
+      
+      // Face shape matching (highest priority - 30 points)
+      if (criteria.faceShape && frame.suitableFaceShapes?.includes(criteria.faceShape)) {
+        score += 30;
+      }
+      
+      // Size matching (25 points)
+      if (criteria.recommendedSize && frame.size === criteria.recommendedSize) {
+        score += 25;
+      }
+      
+      // Color matching (20 points for exact match)
+      if (criteria.recommendedColors && criteria.recommendedColors.includes(frame.color)) {
+        score += 20;
+      }
+      
+      // Style matching (20 points for exact match)
+      if (criteria.recommendedStyles && criteria.recommendedStyles.includes(frame.style)) {
+        score += 20;
+      }
+      
+      // Stock status bonus (prioritize available frames)
+      if (frame.stockStatus === 'in_stock') {
+        score += 10;
+      } else if (frame.stockStatus === 'low_stock') {
+        score += 5;
+      }
+      
+      // Stock count bonus (more available = slightly higher score)
+      if (frame.stockCount && frame.stockCount > 0) {
+        score += Math.min(frame.stockCount / 10, 5); // Max 5 bonus points
+      }
+      
+      return { ...frame, matchScore: score };
+    });
+
+    // Sort by score (highest first) and return top results
+    return scoredFrames
+      .sort((a, b) => b.matchScore - a.matchScore)
+      .slice(0, limit)
+      .map(({ matchScore, ...frame }) => frame); // Remove score from final result
   }
 
   async getFrame(id: string): Promise<Frame | undefined> {
