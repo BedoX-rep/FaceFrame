@@ -1,6 +1,10 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || "" });
+if (!process.env.GOOGLE_AI_API_KEY) {
+  throw new Error("GOOGLE_AI_API_KEY environment variable is required");
+}
+
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
 
 export interface FacialAnalysis {
   faceShape: string;
