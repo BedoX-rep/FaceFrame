@@ -91,20 +91,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (tryOnError) {
           console.error(`Failed to generate try-on for frame ${frame.id}:`, tryOnError);
-          // Skip frame if try-on generation fails
-          console.log(`Skipping frame ${frame.id} due to try-on generation failure`);
+          
+          // Still include the frame but without virtual try-on
+          framesWithTryOn.push({
+            frameId: frame.id,
+            virtualTryOnImage: null,
+            description: "Virtual try-on temporarily unavailable due to API limits"
+          });
         }
       }
 
       console.log("Step 5: Completed! Sending results to client...");
+      
+      // Map frames with try-on data to the expected format
+      const recommendedFrames = recommendedFrames.map((frame, index) => {
+        const tryOnData = framesWithTryOn.find(tryOn => tryOn.frameId === frame.id);
+        return {
+          ...frame,
+          virtualTryOn: tryOnData ? {
+            imageBase64: tryOnData.virtualTryOnImage,
+            description: tryOnData.description
+          } : null
+        };
+      });
+
       res.json({
         sessionId,
-        faceShape: analysis.faceShape,
-        recommendedSizes: analysis.recommendedSizes,
-        recommendedColors: analysis.recommendedColors,
-        recommendedStyles: analysis.recommendedStyles,
-        confidence: analysis.confidence,
-        virtualTryOnImages: framesWithTryOn,
+        analysis: {
+          faceShape: analysis.faceShape,
+          recommendedSizes: analysis.recommendedSizes,
+          recommendedColors: analysis.recommendedColors,
+          recommendedStyles: analysis.recommendedStyles,
+          confidence: analysis.confidence
+        },
+        recommendedFrames,
         message: `Generated ${framesWithTryOn.length} virtual try-on images`,
       });
     } catch (error) {
