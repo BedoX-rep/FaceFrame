@@ -60,7 +60,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         recommendedStyles: analysis.recommendedStyles,
       };
 
-      const recommendedFrames = await storage.searchFrames(searchCriteria, 5);
+      const recommendedFrames = await storage.searchFrames(searchCriteria, 3);
 
       // Step 4: Generate virtual try-on images for each recommended frame
       console.log("Step 4: Generating virtual try-on images...");
