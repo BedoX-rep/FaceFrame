@@ -18,12 +18,11 @@ export interface TryOnResult {
 
 export async function generateVirtualTryOn(
   userPhotoBase64: string,
-  frameImageBase64: string,
   frameDetails: { name: string; brand: string; style: string; color: string }
 ): Promise<TryOnResult> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-preview-image-generation",
+      model: "gemini-2.5-flash-image-preview",
       config: {
         responseModalities: ["TEXT", "IMAGE"]
       },
@@ -34,22 +33,14 @@ export async function generateVirtualTryOn(
             mimeType: "image/jpeg",
           },
         },
-        {
-          inlineData: {
-            data: frameImageBase64,
-            mimeType: "image/jpeg", 
-          },
-        },
-        `Generate a high-quality, photorealistic virtual try-on image showing the person from the first image wearing the ${frameDetails.name} eyeglass frames from the second image. The frames are ${frameDetails.style} style in ${frameDetails.color} color by ${frameDetails.brand}. 
+        `Edit this person's photo to show them wearing ${frameDetails.style} style eyeglass frames in ${frameDetails.color} color. Create a realistic virtual try-on that:
+- Keeps the person's exact face, expression, and features unchanged
+- Adds professional-looking ${frameDetails.style} frames in ${frameDetails.color} color
+- Positions frames naturally on their face according to their bone structure
+- Uses realistic lighting and shadows
+- Makes it look like they're actually wearing the glasses
 
-Create a professional virtual try-on that:
-- Maintains the person's exact facial features and expression
-- Properly fits and positions the frames on their face according to their face shape and size
-- Ensures the frame style, color, and design exactly match the provided frame photo
-- Uses natural lighting and realistic shadows
-- Looks like a professional eyewear photo
-
-Generate both the image and a brief description of how the frames suit this person's face.`
+Return a natural, professional photo of this person wearing the ${frameDetails.style} frames in ${frameDetails.color}.`
       ],
     });
 

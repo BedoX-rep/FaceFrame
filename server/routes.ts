@@ -76,7 +76,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           const virtualTryOn = await generateVirtualTryOn(
             imageBase64,
-            frameImageBase64,
             {
               name: frame.name,
               brand: frame.brand,
@@ -86,28 +85,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           );
 
           framesWithTryOn.push({
-            ...frame,
-            virtualTryOn: {
-              imageBase64: virtualTryOn.generatedImageBase64,
-              description: virtualTryOn.description,
-            },
+            frameId: frame.id,
+            virtualTryOnImage: virtualTryOn.generatedImageBase64,
+            description: virtualTryOn.description,
           });
         } catch (tryOnError) {
           console.error(`Failed to generate try-on for frame ${frame.id}:`, tryOnError);
-          // Include frame without try-on if generation fails
-          framesWithTryOn.push({
-            ...frame,
-            virtualTryOn: null,
-          });
+          // Skip frame if try-on generation fails
+          console.log(`Skipping frame ${frame.id} due to try-on generation failure`);
         }
       }
 
       console.log("Step 5: Completed! Sending results to client...");
       res.json({
         sessionId,
-        analysis: savedAnalysis,
-        recommendedFrames: framesWithTryOn,
-        message: "Successfully generated virtual try-on images for recommended frames!",
+        faceShape: analysis.faceShape,
+        recommendedSizes: analysis.recommendedSizes,
+        recommendedColors: analysis.recommendedColors,
+        recommendedStyles: analysis.recommendedStyles,
+        confidence: analysis.confidence,
+        virtualTryOnImages: framesWithTryOn,
+        message: `Generated ${framesWithTryOn.length} virtual try-on images`,
       });
     } catch (error) {
       console.error("Face analysis error:", error);
