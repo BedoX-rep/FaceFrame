@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Step 5: Completed! Sending results to client...");
       
       // Map frames with try-on data to the expected format
-      const recommendedFrames = recommendedFrames.map((frame, index) => {
+      const framesWithVirtualTryOn = recommendedFrames.map((frame, index) => {
         const tryOnData = framesWithTryOn.find(tryOn => tryOn.frameId === frame.id);
         return {
           ...frame,
@@ -124,7 +124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           recommendedStyles: analysis.recommendedStyles,
           confidence: analysis.confidence
         },
-        recommendedFrames,
+        recommendedFrames: framesWithVirtualTryOn,
         message: `Generated ${framesWithTryOn.length} virtual try-on images`,
       });
     } catch (error) {

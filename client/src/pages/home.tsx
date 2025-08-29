@@ -285,9 +285,9 @@ export default function Home() {
                       </span>
                     </div>
                     <div>
-                      <span className="text-muted-foreground">Recommended Size:</span>
-                      <span className="ml-2 font-medium" data-testid="text-recommended-size">
-                        {analysisResult.recommendedSize}
+                      <span className="text-muted-foreground">Recommended Sizes:</span>
+                      <span className="ml-2 font-medium" data-testid="text-recommended-sizes">
+                        {analysisResult.recommendedSizes?.join(", ")}
                       </span>
                     </div>
                     <div>
