@@ -84,19 +84,9 @@ Generate both the image and a brief description of how the frames suit this pers
   }
 }
 
-async function delay(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 export async function analyzeFacialFeatures(imageBase64: string): Promise<FacialAnalysis> {
-  const maxRetries = 3;
-  let lastError: Error;
-
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Gemini API attempt ${attempt}/${maxRetries}`);
-      
-      const systemPrompt = `You are an expert optical stylist and facial feature analyst. 
+  try {
+    const systemPrompt = `You are an expert optical stylist and facial feature analyst. 
 Analyze the person's face in the image and provide frame recommendations.
 
 Your task is to:
@@ -121,107 +111,73 @@ Consider factors like:
 
 Respond with JSON in the exact format specified in the schema.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              faceShape: { 
-                type: "string", 
-                enum: ["oval", "round", "square", "heart", "diamond", "oblong"]
-              },
-              recommendedSize: { 
-                type: "string", 
-                enum: ["Small", "Medium", "Large"] 
-              },
-              recommendedColors: { 
-                type: "array", 
-                items: { 
-                  type: "string",
-                  enum: ["Black", "Blue", "Gold", "Tortoise"]
-                },
-                description: "Colors from available options"
-              },
-              recommendedStyles: { 
-                type: "array", 
-                items: { 
-                  type: "string",
-                  enum: ["Aviator", "Cat-eye", "Rectangle", "Round", "Square"]
-                },
-                description: "Styles from available options"
-              },
-              confidence: { 
-                type: "number",
-                minimum: 0,
-                maximum: 1,
-                description: "Confidence score between 0 and 1"
-              },
-              reasoning: { 
-                type: "string",
-                description: "Brief explanation of the recommendations"
-              }
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            faceShape: { 
+              type: "string", 
+              enum: ["oval", "round", "square", "heart", "diamond", "oblong"]
             },
-            required: ["faceShape", "recommendedSize", "recommendedColors", "recommendedStyles", "confidence", "reasoning"]
+            recommendedSize: { 
+              type: "string", 
+              enum: ["Small", "Medium", "Large"] 
+            },
+            recommendedColors: { 
+              type: "array", 
+              items: { type: "string" },
+              description: "Colors like Black, Brown, Tortoise, Silver, Gold, Blue, etc."
+            },
+            recommendedStyles: { 
+              type: "array", 
+              items: { type: "string" },
+              description: "Styles like Rectangle, Round, Aviator, Square, Cat-eye, etc."
+            },
+            confidence: { 
+              type: "number",
+              minimum: 0,
+              maximum: 1,
+              description: "Confidence score between 0 and 1"
+            },
+            reasoning: { 
+              type: "string",
+              description: "Brief explanation of the recommendations"
+            }
+          },
+          required: ["faceShape", "recommendedSize", "recommendedColors", "recommendedStyles", "confidence", "reasoning"]
+        },
+      },
+      contents: [
+        {
+          inlineData: {
+            data: imageBase64,
+            mimeType: "image/jpeg",
           },
         },
-        contents: [
-          {
-            inlineData: {
-              data: imageBase64,
-              mimeType: "image/jpeg",
-            },
-          },
-          "Analyze this person's facial features and provide detailed eyeglass frame recommendations based on their face shape, size, and features."
-        ],
-      });
+        "Analyze this person's facial features and provide detailed eyeglass frame recommendations based on their face shape, size, and features."
+      ],
+    });
 
-      const rawJson = response.text;
+    const rawJson = response.text;
 
-      if (!rawJson) {
-        throw new Error("Empty response from Gemini model");
-      }
-
-      const data: FacialAnalysis = JSON.parse(rawJson);
-      
-      // Validate the response
-      if (!data.faceShape || !data.recommendedSize || !data.recommendedColors || !data.recommendedStyles) {
-        throw new Error("Invalid response format from Gemini model");
-      }
-
-      console.log(`Gemini analysis successful on attempt ${attempt}`);
-      return data;
-
-    } catch (error: any) {
-      lastError = error;
-      console.error(`Gemini API attempt ${attempt} failed:`, error);
-      
-      // Check if it's a 503 overload error
-      if (error.status === 503 || error.message?.includes("overloaded") || error.message?.includes("UNAVAILABLE")) {
-        console.log(`API overloaded, waiting before retry ${attempt}/${maxRetries}`);
-        if (attempt < maxRetries) {
-          await delay(2000 * attempt); // Exponential backoff: 2s, 4s, 6s
-          continue;
-        }
-      }
-      
-      // For non-503 errors or final attempt, break immediately
-      if (attempt === maxRetries || error.status !== 503) {
-        break;
-      }
+    if (!rawJson) {
+      throw new Error("Empty response from Gemini model");
     }
-  }
 
-  // If all retries failed, return a reasonable fallback based on common characteristics
-  console.log("All Gemini API attempts failed, using intelligent fallback analysis");
-  return {
-    faceShape: "oval", // Most common and versatile face shape
-    recommendedSize: "Medium", // Safe middle option
-    recommendedColors: ["Black", "Tortoise"], // Most versatile colors
-    recommendedStyles: ["Rectangle", "Aviator"], // Popular, versatile styles
-    confidence: 0.5, // Indicate this is a fallback
-    reasoning: "API temporarily unavailable. Providing versatile frame recommendations that work well for most face shapes. These suggestions prioritize popular, safe choices that are generally flattering."
-  };
+    const data: FacialAnalysis = JSON.parse(rawJson);
+    
+    // Validate the response
+    if (!data.faceShape || !data.recommendedSize || !data.recommendedColors || !data.recommendedStyles) {
+      throw new Error("Invalid response format from Gemini model");
+    }
+
+    return data;
+  } catch (error) {
+    console.error("Failed to analyze facial features:", error);
+    throw new Error(`Failed to analyze facial features: ${error}`);
+  }
 }
