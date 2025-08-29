@@ -9,15 +9,12 @@ if (!connectionString) {
   throw new Error("DATABASE_URL environment variable is required");
 }
 
-// Configure postgres client with SSL settings for Supabase
+// Configure postgres client for Supabase
 const client = postgres(connectionString, {
-  ssl: 'require',
+  ssl: 'prefer',
   max: 20,
   idle_timeout: 20,
-  connect_timeout: 30,
-  transform: {
-    undefined: null
-  }
+  connect_timeout: 30
 });
 const db = drizzle(client);
 
