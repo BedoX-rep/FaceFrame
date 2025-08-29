@@ -61,7 +61,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Step 4: Generate virtual try-on images for each recommended frame
       console.log("Step 4: Generating virtual try-on images...");
-      const framesWithTryOn = [];
+      const framesWithTryOn: Array<{
+        frameId: string;
+        virtualTryOnImage: string | null;
+        description: string;
+      }> = [];
 
       for (const frame of recommendedFrames) {
         try {
