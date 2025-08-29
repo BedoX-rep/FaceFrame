@@ -5,6 +5,8 @@ import { storage } from "./storage";
 import { analyzeFacialFeatures, generateVirtualTryOn } from "./services/gemini";
 import { frameSearchSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { storageService } from "./services/supabase-storage";
+import { join } from "path";
 
 // Configure multer for image upload
 const upload = multer({
@@ -297,6 +299,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Seed frames error:", error);
       res.status(500).json({ 
         message: "Failed to seed test frames." 
+      });
+    }
+  });
+
+  // Upload generated images to Supabase storage and update frame URLs
+  app.post("/api/upload-frame-images", async (req, res) => {
+    try {
+      const frameImageMappings = [
+        {
+          localPath: join(process.cwd(), "attached_assets/generated_images/Gold_aviator_eyeglasses_9ca53d83.png"),
+          fileName: "aviator-gold.png",
+          frameName: "Classic Aviator"
+        },
+        {
+          localPath: join(process.cwd(), "attached_assets/generated_images/Black_wayfarer_eyeglasses_b2d959c7.png"),
+          fileName: "wayfarer-black.png",
+          frameName: "Wayfarer Black"
+        },
+        {
+          localPath: join(process.cwd(), "attached_assets/generated_images/Tortoise_round_vintage_eyeglasses_921ed3aa.png"),
+          fileName: "round-tortoise.png",
+          frameName: "Round Vintage"
+        },
+        {
+          localPath: join(process.cwd(), "attached_assets/generated_images/Blue_modern_square_eyeglasses_178251b7.png"),
+          fileName: "square-blue.png",
+          frameName: "Modern Square"
+        },
+        {
+          localPath: join(process.cwd(), "attached_assets/generated_images/Black_cat-eye_elegant_eyeglasses_7ff7e41a.png"),
+          fileName: "cat-eye-black.png",
+          frameName: "Cat-Eye Classic"
+        }
+      ];
+
+      const uploadResults = [];
+      
+      for (const mapping of frameImageMappings) {
+        try {
+          // Upload image to Supabase storage
+          const uploadResult = await storageService.uploadImage(mapping.localPath, mapping.fileName);
+          
+          // Update frame in database with new URL
+          const frames = await storage.getAllFrames();
+          const frame = frames.find(f => f.name === mapping.frameName);
+          
+          if (frame) {
+            // Update the frame's imageUrl in the database
+            await storage.updateFrameImageUrl(frame.id, uploadResult.publicUrl);
+            uploadResults.push({
+              frameName: mapping.frameName,
+              fileName: mapping.fileName,
+              publicUrl: uploadResult.publicUrl,
+              updated: true
+            });
+          } else {
+            uploadResults.push({
+              frameName: mapping.frameName,
+              fileName: mapping.fileName,
+              publicUrl: uploadResult.publicUrl,
+              updated: false,
+              error: "Frame not found in database"
+            });
+          }
+        } catch (uploadError) {
+          console.error(`Failed to upload ${mapping.fileName}:`, uploadError);
+          uploadResults.push({
+            frameName: mapping.frameName,
+            fileName: mapping.fileName,
+            error: uploadError instanceof Error ? uploadError.message : 'Unknown error',
+            updated: false
+          });
+        }
+      }
+
+      res.json({
+        message: `Processed ${uploadResults.length} frame images`,
+        results: uploadResults
+      });
+    } catch (error) {
+      console.error("Upload frame images error:", error);
+      res.status(500).json({
+        message: "Failed to upload frame images to storage."
       });
     }
   });

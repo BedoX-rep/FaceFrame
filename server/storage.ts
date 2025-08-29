@@ -28,6 +28,7 @@ export interface IStorage {
   getFrame(id: string): Promise<Frame | undefined>;
   getAllFrames(): Promise<Frame[]>;
   createFrame(frame: InsertFrame): Promise<Frame>;
+  updateFrameImageUrl(id: string, imageUrl: string): Promise<Frame | undefined>;
   
   // Analysis operations
   saveAnalysis(analysis: InsertAnalysis): Promise<AnalysisResult>;
@@ -115,6 +116,15 @@ export class DatabaseStorage implements IStorage {
 
   async createFrame(insertFrame: InsertFrame): Promise<Frame> {
     const result = await db.insert(frames).values(insertFrame).returning();
+    return result[0];
+  }
+
+  async updateFrameImageUrl(id: string, imageUrl: string): Promise<Frame | undefined> {
+    const result = await db
+      .update(frames)
+      .set({ imageUrl })
+      .where(eq(frames.id, id))
+      .returning();
     return result[0];
   }
 
