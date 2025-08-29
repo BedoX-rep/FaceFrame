@@ -1,10 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { join } from "path";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Serve generated images as static files
+app.use('/attached_assets', express.static(join(process.cwd(), 'attached_assets')));
 
 app.use((req, res, next) => {
   const start = Date.now();
