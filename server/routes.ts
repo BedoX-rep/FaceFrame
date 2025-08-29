@@ -220,7 +220,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: '189.99',
           stockStatus: 'in_stock',
           stockCount: 25,
-          imageUrl: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=300&h=300&fit=crop',
+          imageUrl: '/attached_assets/generated_images/Gold_aviator_eyeglasses_9ca53d83.png',
           description: 'Timeless aviator design with gold frame and green lenses',
           features: { material: 'metal', lens_type: 'polarized', weight: 'lightweight' },
           suitableFaceShapes: ['oval', 'square', 'heart']
@@ -234,7 +234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: '159.99',
           stockStatus: 'in_stock',
           stockCount: 18,
-          imageUrl: 'https://images.unsplash.com/photo-1574258495973-f010dfbb5371?w=300&h=300&fit=crop',
+          imageUrl: '/attached_assets/generated_images/Black_wayfarer_eyeglasses_b2d959c7.png',
           description: 'Classic black wayfarer style perfect for any occasion',
           features: { material: 'acetate', lens_type: 'standard', weight: 'medium' },
           suitableFaceShapes: ['round', 'oval', 'diamond']
@@ -248,7 +248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: '299.99',
           stockStatus: 'in_stock',
           stockCount: 12,
-          imageUrl: 'https://images.unsplash.com/photo-1509695507497-903c140c43b0?w=300&h=300&fit=crop',
+          imageUrl: '/attached_assets/generated_images/Tortoise_round_vintage_eyeglasses_921ed3aa.png',
           description: 'Vintage-inspired round frames in classic tortoise pattern',
           features: { material: 'acetate', lens_type: 'anti_glare', weight: 'lightweight' },
           suitableFaceShapes: ['square', 'heart', 'oblong']
@@ -262,7 +262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: '95.99',
           stockStatus: 'low_stock',
           stockCount: 3,
-          imageUrl: 'https://images.unsplash.com/photo-1556306510-c0b89e82e72e?w=300&h=300&fit=crop',
+          imageUrl: '/attached_assets/generated_images/Blue_modern_square_eyeglasses_178251b7.png',
           description: 'Contemporary square frames in stylish blue',
           features: { material: 'acetate', lens_type: 'blue_light', weight: 'lightweight' },
           suitableFaceShapes: ['round', 'oval']
@@ -276,7 +276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           price: '450.00',
           stockStatus: 'in_stock',
           stockCount: 8,
-          imageUrl: 'https://images.unsplash.com/photo-1586953208448-b95a79798f07?w=300&h=300&fit=crop',
+          imageUrl: '/attached_assets/generated_images/Black_cat-eye_elegant_eyeglasses_7ff7e41a.png',
           description: 'Elegant cat-eye frames for a sophisticated look',
           features: { material: 'acetate', lens_type: 'standard', weight: 'medium' },
           suitableFaceShapes: ['heart', 'diamond', 'oval']
