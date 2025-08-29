@@ -7,6 +7,7 @@ import { frameSearchSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { storageService } from "./services/supabase-storage";
 import { join } from "path";
+import { writeFileSync } from "fs";
 
 // Configure multer for image upload
 const upload = multer({
@@ -71,15 +72,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const frame of recommendedFrames) {
         try {
-          // For this demo, we'll use a placeholder frame image
-          // In a real implementation, you'd fetch the actual frame image from frame.imageUrl
-          let frameImageBase64 = imageBase64; // Placeholder - would be the actual frame photo
-          
-          // If frame has an imageUrl, you could fetch it and convert to base64
-          if (frame.imageUrl && frame.imageUrl.startsWith('data:image/')) {
-            frameImageBase64 = frame.imageUrl.split(',')[1];
-          }
-
           const virtualTryOn = await generateVirtualTryOn(
             imageBase64,
             {
@@ -90,6 +82,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           );
 
+          // Save generated image locally if it's different from original
+          if (virtualTryOn.generatedImageBase64 && virtualTryOn.generatedImageBase64 !== imageBase64) {
+            try {
+              const fileName = `${sessionId}_${frame.name.replace(/\s+/g, '_')}_${Date.now()}.jpg`;
+              const filePath = join(process.cwd(), 'generated_images', fileName);
+              const imageBuffer = Buffer.from(virtualTryOn.generatedImageBase64, 'base64');
+              writeFileSync(filePath, imageBuffer);
+              console.log(`Saved generated image: ${fileName}`);
+            } catch (saveError) {
+              console.error('Failed to save generated image locally:', saveError);
+            }
+          }
+
           framesWithTryOn.push({
             frameId: frame.id,
             virtualTryOnImage: virtualTryOn.generatedImageBase64,
@@ -98,11 +103,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (tryOnError) {
           console.error(`Failed to generate try-on for frame ${frame.id}:`, tryOnError);
           
+          // Check if it's a quota error
+          const isQuotaError = tryOnError instanceof Error && 
+            (tryOnError.message.includes('quota') || tryOnError.message.includes('429'));
+          
           // Still include the frame but without virtual try-on
           framesWithTryOn.push({
             frameId: frame.id,
             virtualTryOnImage: null,
-            description: "Virtual try-on temporarily unavailable due to API limits"
+            description: isQuotaError 
+              ? "Virtual try-on temporarily unavailable due to API quota limits. Your facial analysis and frame recommendations are complete!"
+              : "Virtual try-on temporarily unavailable. Your facial analysis and frame recommendations are complete!"
           });
         }
       }
