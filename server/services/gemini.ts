@@ -4,9 +4,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_API_KEY || "" });
 
 export interface FacialAnalysis {
   faceShape: string;
-  recommendedSize: string;
-  recommendedColors: string[];
-  recommendedStyles: string[];
+  recommendedSizes: string[];  // Exactly 2 sizes
+  recommendedColors: string[]; // Exactly 2 colors
+  recommendedStyles: string[]; // Exactly 2 styles
   confidence: number;
   reasoning: string;
 }
@@ -23,7 +23,7 @@ export async function generateVirtualTryOn(
 ): Promise<TryOnResult> {
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-2.0-flash-preview-image-generation",
       config: {
         responseModalities: ["TEXT", "IMAGE"]
       },
@@ -90,24 +90,26 @@ export async function analyzeFacialFeatures(imageBase64: string): Promise<Facial
 Analyze the person's face in the image and provide frame recommendations.
 
 Your task is to:
-1. Determine the face shape (oval, round, square, heart, diamond, oblong)
-2. Recommend frame size (Small, Medium, Large) based on facial proportions
-3. Suggest frame colors that complement skin tone and features
-4. Recommend frame styles that enhance facial features
+1. Determine the primary face shape (oval, round, square, heart, diamond, oblong)
+2. Recommend EXACTLY 2 frame sizes based on facial proportions and preference  
+3. Suggest EXACTLY 2 frame colors that complement skin tone and features
+4. Recommend EXACTLY 2 frame styles that enhance facial features
 
-IMPORTANT: Use only these exact values for your recommendations:
+CRITICAL: Use only these EXACT values from our database:
 - Face shapes: oval, round, square, heart, diamond, oblong
-- Frame sizes: Small, Medium, Large (exactly as written)
-- Frame colors: Black, Blue, Gold, Tortoise (exactly as written)
-- Frame styles: Aviator, Cat-eye, Rectangle, Round, Square (exactly as written, note Cat-eye has lowercase 'e')
+- Frame sizes: Small, Medium, Large (exactly as written, case-sensitive)
+- Frame colors: Black, Blue, Gold, Tortoise (exactly as written, case-sensitive)
+- Frame styles: Aviator, Cat-eye, Rectangle, Round, Square (exactly as written, case-sensitive, note Cat-eye has lowercase 'e')
+
+You MUST return exactly 2 sizes, 2 colors, and 2 styles in your arrays.
 
 Consider factors like:
-- Face width vs length ratio
-- Jawline shape and prominence
-- Cheekbone width and height
-- Forehead width
-- Skin tone and undertones
-- Eye spacing and size
+- Face width vs length ratio for size recommendations
+- Jawline shape and prominence for style selection
+- Cheekbone width and height for frame positioning
+- Forehead width for balance
+- Skin tone and undertones for color matching
+- Eye spacing and size for frame proportion
 
 Respond with JSON in the exact format specified in the schema.`;
 
@@ -123,19 +125,26 @@ Respond with JSON in the exact format specified in the schema.`;
               type: "string", 
               enum: ["oval", "round", "square", "heart", "diamond", "oblong"]
             },
-            recommendedSize: { 
-              type: "string", 
-              enum: ["Small", "Medium", "Large"] 
+            recommendedSizes: { 
+              type: "array", 
+              items: { type: "string", enum: ["Small", "Medium", "Large"] },
+              minItems: 2,
+              maxItems: 2,
+              description: "Exactly 2 recommended frame sizes"
             },
             recommendedColors: { 
               type: "array", 
-              items: { type: "string" },
-              description: "Colors like Black, Brown, Tortoise, Silver, Gold, Blue, etc."
+              items: { type: "string", enum: ["Black", "Blue", "Gold", "Tortoise"] },
+              minItems: 2,
+              maxItems: 2,
+              description: "Exactly 2 recommended frame colors"
             },
             recommendedStyles: { 
               type: "array", 
-              items: { type: "string" },
-              description: "Styles like Rectangle, Round, Aviator, Square, Cat-eye, etc."
+              items: { type: "string", enum: ["Aviator", "Cat-eye", "Rectangle", "Round", "Square"] },
+              minItems: 2,
+              maxItems: 2,
+              description: "Exactly 2 recommended frame styles"
             },
             confidence: { 
               type: "number",
@@ -148,7 +157,7 @@ Respond with JSON in the exact format specified in the schema.`;
               description: "Brief explanation of the recommendations"
             }
           },
-          required: ["faceShape", "recommendedSize", "recommendedColors", "recommendedStyles", "confidence", "reasoning"]
+          required: ["faceShape", "recommendedSizes", "recommendedColors", "recommendedStyles", "confidence", "reasoning"]
         },
       },
       contents: [
@@ -171,7 +180,7 @@ Respond with JSON in the exact format specified in the schema.`;
     const data: FacialAnalysis = JSON.parse(rawJson);
     
     // Validate the response
-    if (!data.faceShape || !data.recommendedSize || !data.recommendedColors || !data.recommendedStyles) {
+    if (!data.faceShape || !data.recommendedSizes || !data.recommendedColors || !data.recommendedStyles) {
       throw new Error("Invalid response format from Gemini model");
     }
 

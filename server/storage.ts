@@ -66,8 +66,8 @@ export class DatabaseStorage implements IStorage {
         score += 30;
       }
       
-      // Size matching (25 points)
-      if (criteria.recommendedSize && frame.size === criteria.recommendedSize) {
+      // Size matching (25 points for exact match, 15 points for any match)
+      if (criteria.recommendedSizes && criteria.recommendedSizes.includes(frame.size)) {
         score += 25;
       }
       

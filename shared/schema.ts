@@ -30,7 +30,7 @@ export const analysisResults = pgTable("analysis_results", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   sessionId: text("session_id").notNull(),
   faceShape: text("face_shape").notNull(),
-  recommendedSize: text("recommended_size").notNull(),
+  recommendedSizes: text("recommended_sizes").array().notNull(),
   recommendedColors: text("recommended_colors").array(),
   recommendedStyles: text("recommended_styles").array(),
   confidence: decimal("confidence", { precision: 3, scale: 2 }),
@@ -62,7 +62,7 @@ export type InsertAnalysis = z.infer<typeof insertAnalysisSchema>;
 // Frame search criteria schema
 export const frameSearchSchema = z.object({
   faceShape: z.string(),
-  recommendedSize: z.string(),
+  recommendedSizes: z.array(z.string()),
   recommendedColors: z.array(z.string()),
   recommendedStyles: z.array(z.string()),
 });

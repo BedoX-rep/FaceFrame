@@ -41,7 +41,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const savedAnalysis = await storage.saveAnalysis({
         sessionId,
         faceShape: analysis.faceShape,
-        recommendedSize: analysis.recommendedSize,
+        recommendedSizes: analysis.recommendedSizes,
         recommendedColors: analysis.recommendedColors || [],
         recommendedStyles: analysis.recommendedStyles || [],
         confidence: analysis.confidence?.toString() || "0.80",
@@ -52,7 +52,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Step 3: Searching for matching frames...");
       const searchCriteria = {
         faceShape: analysis.faceShape,
-        recommendedSize: analysis.recommendedSize,
+        recommendedSizes: analysis.recommendedSizes,
         recommendedColors: analysis.recommendedColors,
         recommendedStyles: analysis.recommendedStyles,
       };
