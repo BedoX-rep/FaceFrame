@@ -27,8 +27,7 @@ interface FrameWithTryOn extends Frame {
 const steps = [
   { label: "Take Photo", description: "Capture your photo" },
   { label: "AI Analysis", description: "Analyze facial features" },
-  { label: "Recommendations", description: "Find perfect frames" },
-  { label: "Try On", description: "Visualize frames" },
+  { label: "Virtual Try-On", description: "See frames on you" },
 ];
 
 export default function Home() {
@@ -37,7 +36,6 @@ export default function Home() {
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [recommendedFrames, setRecommendedFrames] = useState<FrameWithTryOn[]>([]);
-  const [selectedFrame, setSelectedFrame] = useState<FrameWithTryOn | null>(null);
   const { toast } = useToast();
 
   const analyzeFaceMutation = useMutation({
@@ -89,17 +87,12 @@ export default function Home() {
     setCurrentStep(0);
   }, []);
 
-  const handleTryOnFrame = useCallback((frame: FrameWithTryOn) => {
-    setSelectedFrame(frame);
-    setCurrentStep(4); // Move to try-on step
-  }, []);
 
   const handleStartOver = useCallback(() => {
     setCapturedPhoto(null);
     setPhotoUrl("");
     setAnalysisResult(null);
     setRecommendedFrames([]);
-    setSelectedFrame(null);
     setCurrentStep(0);
   }, []);
 
@@ -259,11 +252,11 @@ export default function Home() {
           </div>
         )}
 
-        {/* Step 3: Frame Recommendations */}
+        {/* Step 3: Virtual Try-On Results */}
         {currentStep === 3 && analysisResult && (
-          <div data-testid="step-recommendations">
+          <div data-testid="step-results">
             <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Perfect Frames for You</h2>
+              <h2 className="text-3xl font-bold text-foreground mb-4">Your Virtual Try-On Results</h2>
               <p className="text-muted-foreground text-lg">
                 Based on your <strong>{analysisResult.faceShape}</strong> face shape
               </p>
@@ -301,21 +294,112 @@ export default function Home() {
               </div>
             </Card>
 
-            {/* Recommended Frames */}
+            {/* Virtual Try-On Results - Show all frames with generated images */}
             {recommendedFrames.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {recommendedFrames.map((frame) => (
-                  <FrameCard
-                    key={frame.id}
-                    frame={frame}
-                    onTryOn={handleTryOnFrame}
-                    onViewDetails={(frame) => {
-                      toast({
-                        title: frame.name,
-                        description: frame.description || `${frame.style} frame in ${frame.color}`,
-                      });
-                    }}
-                  />
+                  <Card key={frame.id} className="overflow-hidden">
+                    {/* Virtual Try-On Image */}
+                    <div className="aspect-[4/3] bg-muted flex items-center justify-center relative">
+                      {frame.virtualTryOn?.imageBase64 ? (
+                        <div className="w-full h-full">
+                          <img
+                            src={`data:image/jpeg;base64,${frame.virtualTryOn.imageBase64}`}
+                            alt={`Virtual try-on with ${frame.name}`}
+                            className="w-full h-full object-cover"
+                          />
+                          {/* AI Generated Badge */}
+                          <div className="absolute top-2 left-2">
+                            <div className="bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded-full">
+                              AI Generated
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center p-4">
+                          <p className="text-muted-foreground mb-2">Virtual try-on unavailable</p>
+                          <img
+                            src={frame.imageUrl}
+                            alt={frame.name}
+                            className="w-32 h-32 object-cover rounded-lg mx-auto opacity-60"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Frame Details */}
+                    <CardContent className="p-6">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-xl font-bold text-foreground">{frame.name}</h3>
+                          <p className="text-muted-foreground">{frame.brand}</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {frame.style} • {frame.color} • {frame.size}
+                          </p>
+                        </div>
+                        <span className="text-2xl font-bold text-primary">${frame.price}</span>
+                      </div>
+
+                      {/* AI Analysis Description */}
+                      {frame.virtualTryOn?.description && (
+                        <div className="bg-accent/10 rounded-lg p-3 mb-4">
+                          <div className="flex items-start">
+                            <Brain className="text-accent mr-2 w-4 h-4 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm font-medium text-accent mb-1">AI Stylist Analysis</p>
+                              <p className="text-sm text-accent-foreground">
+                                {frame.virtualTryOn.description}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Frame Description */}
+                      {frame.description && (
+                        <p className="text-sm text-muted-foreground mb-4">{frame.description}</p>
+                      )}
+
+                      {/* Stock Status */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2">
+                          {frame.stockStatus === 'in_stock' && (
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          )}
+                          {frame.stockStatus === 'low_stock' && (
+                            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                          )}
+                          {frame.stockStatus === 'out_of_stock' && (
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          )}
+                          <span className="text-sm capitalize text-muted-foreground">
+                            {frame.stockStatus === 'in_stock' && 'In Stock'}
+                            {frame.stockStatus === 'low_stock' && 'Low Stock'}
+                            {frame.stockStatus === 'out_of_stock' && 'Out of Stock'}
+                            {frame.stockStatus === 'order_only' && 'Order Only'}
+                          </span>
+                          {frame.stockCount && frame.stockCount > 0 && (
+                            <span className="text-sm text-muted-foreground">({frame.stockCount} left)</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="space-y-2">
+                        <Button className="w-full" disabled={frame.stockStatus === 'out_of_stock'}>
+                          <ShoppingCart className="mr-2 w-4 h-4" />
+                          Add to Cart - ${frame.price}
+                        </Button>
+                        
+                        {frame.virtualTryOn?.imageBase64 && (
+                          <Button variant="outline" className="w-full">
+                            <Download className="mr-2 w-4 h-4" />
+                            Save Try-On Photo
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : (
@@ -331,169 +415,20 @@ export default function Home() {
 
             {/* Action Buttons */}
             {recommendedFrames.length > 0 && (
-              <div className="mt-8 text-center">
-                <Button onClick={handleStartOver} variant="secondary" className="mr-4">
-                  Start Over
+              <div className="mt-12 text-center space-x-4">
+                <Button onClick={handleStartOver} variant="secondary">
+                  <Redo className="mr-2 w-4 h-4" />
+                  Try Different Photo
+                </Button>
+                <Button variant="outline">
+                  <Calendar className="mr-2 w-4 h-4" />
+                  Schedule In-Store Visit
                 </Button>
               </div>
             )}
           </div>
         )}
 
-        {/* Step 4: Virtual Try-On */}
-        {currentStep === 4 && selectedFrame && (
-          <div data-testid="step-try-on">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-foreground mb-4">Virtual Try-On</h2>
-              <p className="text-muted-foreground text-lg">See how the frames look on you</p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Try-On Preview */}
-              <Card className="overflow-hidden">
-                <div className="aspect-[4/3] bg-muted flex items-center justify-center relative">
-                  {selectedFrame?.virtualTryOn?.imageBase64 ? (
-                    <div className="w-full h-full">
-                      <img
-                        src={`data:image/jpeg;base64,${selectedFrame.virtualTryOn.imageBase64}`}
-                        alt="Virtual try-on preview"
-                        className="w-full h-full object-cover"
-                        data-testid="img-try-on-preview"
-                      />
-                      {/* AI Generated Badge */}
-                      <div className="absolute top-2 left-2">
-                        <div className="bg-primary/90 text-primary-foreground text-xs px-2 py-1 rounded-full">
-                          AI Generated
-                        </div>
-                      </div>
-                    </div>
-                  ) : photoUrl ? (
-                    <div className="w-full h-full relative">
-                      <img
-                        src={photoUrl}
-                        alt="Your original photo"
-                        className="w-full h-full object-cover opacity-50"
-                        data-testid="img-try-on-preview"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <div className="text-white text-center">
-                          <p className="text-lg font-semibold">Generating virtual try-on...</p>
-                          <p className="text-sm mt-1">This may take a few moments</p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-muted-foreground text-center">
-                      <p className="text-lg">Virtual try-on preview</p>
-                      <p className="text-sm mt-2">Select a frame to see how it looks on you</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-4 border-t border-border">
-                  <div className="flex justify-between items-center mb-3">
-                    <div>
-                      <h3 className="font-semibold" data-testid="text-selected-frame-name">
-                        {selectedFrame.name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedFrame.style} • {selectedFrame.color} • {selectedFrame.size}
-                      </p>
-                    </div>
-                    <span className="text-lg font-bold text-primary">${selectedFrame.price}</span>
-                  </div>
-                  
-                  {/* AI Analysis of the try-on */}
-                  {selectedFrame.virtualTryOn?.description && (
-                    <div className="bg-accent/10 rounded-lg p-3 mt-3">
-                      <div className="flex items-start">
-                        <Brain className="text-accent mr-2 w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium text-accent mb-1">AI Stylist Analysis</p>
-                          <p className="text-sm text-accent-foreground">
-                            {selectedFrame.virtualTryOn.description}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </Card>
-
-              {/* Frame Selection Sidebar */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold mb-4">Your Recommended Frames</h3>
-
-                <div className="space-y-3">
-                  {recommendedFrames.map((frame) => (
-                    <Card
-                      key={frame.id}
-                      className={`cursor-pointer transition-colors ${
-                        selectedFrame.id === frame.id
-                          ? "bg-primary/10 border-primary"
-                          : "hover:bg-muted/50"
-                      }`}
-                      onClick={() => setSelectedFrame(frame)}
-                      data-testid={`card-frame-selector-${frame.id}`}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden">
-                            <img
-                              src={frame.imageUrl}
-                              alt={frame.name}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium">{frame.name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {frame.style} • {frame.color}
-                            </p>
-                            <p className="text-sm font-semibold text-primary">${frame.price}</p>
-                          </div>
-                          {selectedFrame.id === frame.id && (
-                            <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                              <CheckCircle className="text-primary-foreground text-xs w-4 h-4" />
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3 pt-4">
-                  <Button className="w-full" data-testid="button-save-photo">
-                    <Download className="mr-2 w-4 h-4" />
-                    Save Try-On Photo
-                  </Button>
-
-                  <Button variant="outline" className="w-full" data-testid="button-add-to-cart">
-                    <ShoppingCart className="mr-2 w-4 h-4" />
-                    Add to Cart - ${selectedFrame.price}
-                  </Button>
-
-                  <Button variant="outline" className="w-full" data-testid="button-schedule-appointment">
-                    <Calendar className="mr-2 w-4 h-4" />
-                    Schedule In-Store Visit
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={handleStartOver}
-                    data-testid="button-start-over"
-                  >
-                    <Redo className="mr-2 w-4 h-4" />
-                    Try Different Frames
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </main>
 
       {/* Footer */}
